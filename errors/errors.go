@@ -1,50 +1,69 @@
 package errors
 
 import (
-	"encoding/json"
 	"github.com/dkhvan-dev/web-commons/config"
 	"github.com/dkhvan-dev/web-commons/constants"
+	"github.com/gin-gonic/gin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"net/http"
 )
 
 type CustomError struct {
-	Msg  string
-	Code int
+	Key     string
+	Code    int
+	Request *http.Request
 }
 
-func (c CustomError) Error() string {
-	return c.Msg
+func (e *CustomError) Error() string {
+	return e.Key
 }
 
-func NewLocalizedError(localizer *i18n.Localizer, key string, code int) *CustomError {
+func NotFoundError(key string, r *http.Request) *CustomError {
+	return &CustomError{Key: key, Code: 404, Request: r}
+}
+
+func BadRequestError(key string, r *http.Request) *CustomError {
+	return &CustomError{Key: key, Code: 400, Request: r}
+}
+
+func ValidationError(key string, r *http.Request) *CustomError {
+	return &CustomError{Key: key, Code: 400, Request: r}
+}
+
+func AccessDeniedError(r *http.Request) *CustomError {
+	return &CustomError{Key: "FORBIDDEN", Code: 403, Request: r}
+}
+
+func UnauthorizedError(r *http.Request) *CustomError {
+	return &CustomError{Key: "UNAUTHORIZED", Code: 401, Request: r}
+}
+
+func handleLocalizedError(ctx *gin.Context, err *CustomError) {
+	lang := ctx.GetHeader(constants.ACCEPT_LANGUAGE)
+	if lang == "" {
+		lang = "en"
+	}
+
+	localizer := i18n.NewLocalizer(config.Bundle, lang)
 	message := localizer.MustLocalize(&i18n.LocalizeConfig{
-		MessageID: key,
+		MessageID: err.Key,
 	})
-	return &CustomError{message, code}
+
+	ctx.JSON(err.Code, gin.H{"error": message})
 }
 
-func HandleLocalizedError(w http.ResponseWriter, r *http.Request, key string, code int) {
-	localizer := config.GetLocalizer(r)
-	err := NewLocalizedError(localizer, key, code)
+func ErrorHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				if err, ok := rec.(*CustomError); ok {
+					handleLocalizedError(ctx, err)
+					return
+				}
 
-	errJson := struct {
-		Error string `json:"error"`
-	}{
-		Error: err.Error(),
-	}
-
-	w.Header().Set(constants.CONTENT_TYPE, constants.APPLICATION_JSON)
-	w.WriteHeader(err.Code)
-
-	data, marshalErr := json.Marshal(errJson)
-	if marshalErr != nil {
-		http.Error(w, `{"error": "internal server error"}`, http.StatusInternalServerError)
-		return
-	}
-
-	if _, writeErr := w.Write(data); writeErr != nil {
-		http.Error(w, `{"error": "internal server error"}`, http.StatusInternalServerError)
-		return
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			}
+		}()
+		ctx.Next()
 	}
 }

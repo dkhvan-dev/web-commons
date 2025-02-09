@@ -5,36 +5,27 @@ import (
 	"fmt"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
-	"net/http"
+	"sync"
 )
 
-var Bundle *i18n.Bundle
+var (
+	Bundle *i18n.Bundle
+	once   sync.Once
+	err    error
+)
 
-func InitLocalization() error {
-	Bundle = i18n.NewBundle(language.English)
-	Bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
+func InitLocalization(paths []string) error {
+	once.Do(func() {
+		Bundle = i18n.NewBundle(language.English)
+		Bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 
-	if _, err := Bundle.LoadMessageFile("./msgs/errors.en.json"); err != nil {
-		return fmt.Errorf("failed to load English translations: %w", err)
-	}
+		for _, path := range paths {
+			if _, loadErr := Bundle.LoadMessageFile(path); loadErr != nil {
+				err = fmt.Errorf("failed to load translations '%s': %w", path, loadErr)
+				return
+			}
+		}
+	})
 
-	if _, err := Bundle.LoadMessageFile("./msgs/errors.ru.json"); err != nil {
-		return fmt.Errorf("failed to load Russian translations: %w", err)
-	}
-
-	if _, err := Bundle.LoadMessageFile("./msgs/errors.kk.json"); err != nil {
-		return fmt.Errorf("failed to load Kazakh translations: %w", err)
-	}
-
-	return nil
-}
-
-func GetLocalizer(r *http.Request) *i18n.Localizer {
-	acceptLang := r.Header.Get("Accept-Language")
-	if acceptLang == "" {
-		acceptLang = "en"
-	}
-
-	// Создаем локализатор
-	return i18n.NewLocalizer(Bundle, acceptLang)
+	return err
 }

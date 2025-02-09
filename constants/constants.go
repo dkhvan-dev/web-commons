@@ -8,6 +8,7 @@ const (
 	AUTHORIZATION         = "Authorization"
 	BEARER                = "Bearer "
 	X_IS_INTERNAL_SERVICE = "X-Is-Internal-Service"
+	ACCEPT_LANGUAGE       = "Accept-Language"
 
 	// User Roles
 

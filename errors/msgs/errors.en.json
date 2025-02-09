@@ -1,7 +1,5 @@
 {
   "FORBIDDEN": "Access denied",
   "INTERNAL": "Something went wrong",
-
-  
-  "PRODUCT_NOT_FOUND": "Product not found"
+  "UNAUTHORIZED": "User not authorized"
 }
