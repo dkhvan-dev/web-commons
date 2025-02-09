@@ -20,9 +20,9 @@ func InitLocalization(paths []string) error {
 		Bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 
 		standardPaths := []string{
-			"./errors/msgs/errors.en.json",
-			"./errors/msgs/errors.ru.json",
-			"./errors/msgs/errors.kk.json",
+			"./web-commons/errors/msgs/errors.en.json",
+			"./web-commons/errors/msgs/errors.ru.json",
+			"./web-commons/errors/msgs/errors.kk.json",
 		}
 		for _, path := range standardPaths {
 			if _, loadErr := Bundle.LoadMessageFile(path); loadErr != nil {
