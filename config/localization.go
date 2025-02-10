@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
+	"path/filepath"
+	"runtime"
 	"sync"
 )
 
@@ -19,11 +21,14 @@ func InitLocalization(paths []string) error {
 		Bundle = i18n.NewBundle(language.English)
 		Bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 
+		_, filename, _, _ := runtime.Caller(0)
+		webCommonsPath := filepath.Join(filepath.Dir(filename), "../errors/msgs")
 		standardPaths := []string{
-			"./errors/msgs/errors.en.json",
-			"./errors/msgs/errors.ru.json",
-			"./errors/msgs/errors.kk.json",
+			filepath.Join(webCommonsPath, "errors.en.json"),
+			filepath.Join(webCommonsPath, "errors.ru.json"),
+			filepath.Join(webCommonsPath, "errors.kk.json"),
 		}
+
 		for _, path := range standardPaths {
 			if _, loadErr := Bundle.LoadMessageFile(path); loadErr != nil {
 				err = fmt.Errorf("failed to load standard error messages: %w", err)
