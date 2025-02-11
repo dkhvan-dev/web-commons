@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -21,16 +22,15 @@ func InitLocalization(paths []string) error {
 		Bundle = i18n.NewBundle(language.English)
 		Bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 
-		_, filename, _, _ := runtime.Caller(0)
-		webCommonsPath := filepath.Join(filepath.Dir(filename), "../errors/msgs")
-		standardPaths := []string{
-			filepath.Join(webCommonsPath, "errors.en.json"),
-			filepath.Join(webCommonsPath, "errors.ru.json"),
-			filepath.Join(webCommonsPath, "errors.kk.json"),
+		standardErrMsgsDir := filepath.Join(GetErrMsgPath(), "../errors/msgs")
+		files, err := os.ReadDir(standardErrMsgsDir)
+		if err != nil {
+			err = fmt.Errorf("failed to read localization directory: %w", err)
+			return
 		}
 
-		for _, path := range standardPaths {
-			if _, loadErr := Bundle.LoadMessageFile(path); loadErr != nil {
+		for _, file := range files {
+			if _, loadErr := Bundle.LoadMessageFile(filepath.Join(standardErrMsgsDir, file.Name())); loadErr != nil {
 				err = fmt.Errorf("failed to load standard error messages: %w", err)
 				return
 			}
@@ -45,4 +45,9 @@ func InitLocalization(paths []string) error {
 	})
 
 	return err
+}
+
+func GetErrMsgPath() string {
+	_, fileName, _, _ := runtime.Caller(1)
+	return filepath.Dir(fileName)
 }
