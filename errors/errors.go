@@ -2,6 +2,9 @@ package errors
 
 import (
 	"fmt"
+	"github.com/dkhvan-dev/web-commons/config"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"net/http"
 	"runtime"
 )
@@ -25,7 +28,7 @@ func (e *CustomError) Error() string {
 	return fmt.Sprintf("%s%s", e.Key, location)
 }
 
-func NewCustomError(key string, code int, r *http.Request) *CustomError {
+func NewCustomError(key string, code int, ctx *gin.Context) *CustomError {
 	pc, file, line, ok := runtime.Caller(2)
 	var funcName *string
 
@@ -34,32 +37,49 @@ func NewCustomError(key string, code int, r *http.Request) *CustomError {
 		funcName = &fn
 	}
 
-	return &CustomError{
+	err := &CustomError{
 		Key:      key,
 		Code:     code,
-		Request:  r,
+		Request:  ctx.Request,
 		File:     &file,
 		Line:     &line,
 		Function: funcName,
 	}
+
+	ctx.Set("error", err)
+	return err
 }
 
-func NotFoundError(key string, r *http.Request) *CustomError {
-	return NewCustomError(key, http.StatusNotFound, r)
+func NotFoundError(key string, ctx *gin.Context) *CustomError {
+	return NewCustomError(key, http.StatusNotFound, ctx)
 }
 
-func BadRequestError(key string, r *http.Request) *CustomError {
-	return NewCustomError(key, http.StatusBadRequest, r)
+func BadRequestError(key string, ctx *gin.Context) *CustomError {
+	return NewCustomError(key, http.StatusBadRequest, ctx)
 }
 
-func ValidationError(key string, r *http.Request) *CustomError {
-	return NewCustomError(key, http.StatusBadRequest, r)
+func ValidationError(key string, ctx *gin.Context) *CustomError {
+	return NewCustomError(key, http.StatusBadRequest, ctx)
 }
 
-func AccessDeniedError(r *http.Request) *CustomError {
-	return NewCustomError("FORBIDDEN", http.StatusForbidden, r)
+func AccessDeniedError(ctx *gin.Context) *CustomError {
+	return NewCustomError("FORBIDDEN", http.StatusForbidden, ctx)
 }
 
-func UnauthorizedError(r *http.Request) *CustomError {
-	return NewCustomError("UNAUTHORIZED", http.StatusUnauthorized, r)
+func UnauthorizedError(ctx *gin.Context) *CustomError {
+	return NewCustomError("UNAUTHORIZED", http.StatusUnauthorized, ctx)
+}
+
+func HandleInternalError(err error) {
+	if err == nil {
+		return
+	}
+
+	stack := make([]byte, 4096)
+	length := runtime.Stack(stack, true)
+
+	config.Logger.Error("Internal error occurred",
+		zap.Error(err),
+		zap.String("stacktrace", string(stack[:length])),
+	)
 }

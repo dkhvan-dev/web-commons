@@ -13,25 +13,16 @@ import (
 
 func ErrorHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				if err, ok := rec.(*errors.CustomError); ok {
-					handleLocalizedError(ctx, err)
-					return
-				}
-
-				stack := make([]byte, 4096)
-				length := runtime.Stack(stack, true)
-
-				config.Logger.Error("Internal error occurred",
-					zap.Any("recover", rec),
-					zap.String("stacktrace", string(stack[:length])),
-				)
-
-				handleLocalizedError(ctx, &errors.CustomError{Key: "INTERNAL", Code: http.StatusInternalServerError})
-			}
-		}()
 		ctx.Next()
+
+		if err, exists := ctx.Get("error"); exists {
+			if customErr, ok := err.(*errors.CustomError); ok {
+				handleLocalizedError(ctx, customErr)
+				return
+			}
+
+			handleLocalizedError(ctx, &errors.CustomError{Key: "INTERNAL", Code: http.StatusInternalServerError})
+		}
 	}
 }
 
@@ -69,6 +60,10 @@ func handleLocalizedError(ctx *gin.Context, err *errors.CustomError) {
 	}
 
 	if err.Key == "INTERNAL" {
+		stack := make([]byte, 4096)
+		length := runtime.Stack(stack, true)
+
+		logger.With(zap.String("stacktrace", string(stack[:length])))
 		logger.Error("Internal error occurred")
 	} else {
 		logger.Warn("Localized error occurred")
