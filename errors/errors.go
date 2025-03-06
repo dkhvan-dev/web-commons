@@ -40,13 +40,16 @@ func NewCustomError(key string, code int, ctx *gin.Context) *CustomError {
 	err := &CustomError{
 		Key:      key,
 		Code:     code,
-		Request:  ctx.Request,
 		File:     &file,
 		Line:     &line,
 		Function: funcName,
 	}
 
-	ctx.Set("error", err)
+	if ctx != nil {
+		err.Request = ctx.Request
+		ctx.Set("error", err)
+	}
+
 	return err
 }
 

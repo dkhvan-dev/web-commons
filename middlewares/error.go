@@ -1,14 +1,18 @@
 package middlewares
 
 import (
+	"context"
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/dkhvan-dev/web-commons/config"
 	"github.com/dkhvan-dev/web-commons/constants"
 	"github.com/dkhvan-dev/web-commons/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"go.uber.org/zap"
 	"net/http"
 	"runtime"
+	"strings"
 )
 
 func ErrorHandler() gin.HandlerFunc {
@@ -70,4 +74,25 @@ func handleLocalizedError(ctx *gin.Context, err *errors.CustomError) {
 	}
 
 	ctx.JSON(err.Code, gin.H{"error": message})
+}
+
+func HandleGraphQLError(ctx context.Context, err error) *gqlerror.Error {
+	acceptLang, exists := ctx.Value(constants.ACCEPT_LANGUAGE).(string)
+	if !exists {
+		acceptLang = "en"
+	}
+
+	bugTrack := graphql.DefaultErrorPresenter(ctx, err)
+	localizer := i18n.NewLocalizer(config.Bundle, acceptLang)
+	whiteSpaceIdx := strings.Index(bugTrack.Message, " ")
+
+	message, errLoc := localizer.LocalizeMessage(&i18n.Message{
+		ID: bugTrack.Message[:whiteSpaceIdx],
+	})
+
+	if errLoc != nil {
+		message = "An unexpected error occurred"
+	}
+
+	return gqlerror.Errorf(message)
 }

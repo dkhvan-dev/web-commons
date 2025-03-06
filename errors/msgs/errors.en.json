@@ -1,5 +1,7 @@
 {
   "FORBIDDEN": "Access denied",
   "INTERNAL": "Something went wrong",
-  "UNAUTHORIZED": "User not authorized"
+  "UNAUTHORIZED": "User not authorized",
+  "FIELD_IS_EMPTY": "{} must not be empty",
+  "INVALID_PARAM_TYPE": "Invalid parameter type"
 }
