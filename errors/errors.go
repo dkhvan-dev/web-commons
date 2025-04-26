@@ -12,6 +12,7 @@ import (
 type CustomError struct {
 	Key      string
 	Code     int
+	Msg      *string
 	Request  *http.Request
 	File     *string
 	Line     *int
@@ -19,6 +20,10 @@ type CustomError struct {
 }
 
 func (e *CustomError) Error() string {
+	if e.Msg != nil {
+		return *e.Msg
+	}
+
 	location := ""
 
 	if e.File != nil && e.Line != nil && e.Function != nil {
